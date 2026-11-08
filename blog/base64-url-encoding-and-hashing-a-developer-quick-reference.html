@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Base64, URL Encoding and Hashing: A Developer Quick Reference - UEncoder - Encoding & Hashing Toolbox</title>
+  <meta name="description" content="Base64, URL Encoding and Hashing: A Developer Quick Reference">
+  <meta name="keywords" content="base64, urlencoding, hashing, developer-tools">
+  <meta name="author" content="UEncoder - Encoding & Hashing Toolbox">
+  <meta property="og:title" content="Base64, URL Encoding and Hashing: A Developer Quick Reference">
+  <meta property="og:description" content="Universal encoder toolbox - browser-based encoding, hashing, crypto and formatting tools that run 100% locally">
+  <meta property="og:url" content="https://niceyayale.github.io/uencoder-web/blog/base64-url-encoding-and-hashing-a-developer-quick-reference.html">
+  <meta property="og:type" content="article">
+  <meta property="article:published_time" content="2026-11-08">
+  <meta property="article:tag" content="base64, urlencoding, hashing, developer-tools">
+  <link rel="canonical" href="https://niceyayale.github.io/uencoder-web/blog/base64-url-encoding-and-hashing-a-developer-quick-reference.html">
+  <link rel="alternate" hreflang="en" href="https://niceyayale.github.io/uencoder-web/blog/base64-url-encoding-and-hashing-a-developer-quick-reference.html">
+  <link rel="stylesheet" href="https://niceyayale.github.io/uencoder-web/assets/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="https://niceyayale.github.io/uencoder-web/" class="logo">UEncoder - Encoding & Hashing Toolbox</a>
+      <nav>
+        <a href="https://uencoder.com">Website</a>
+        <a href="https://niceyayale.github.io/uencoder-web/blog/">Blog</a>
+        <a href="https://github.com/niceyayale/uencoder-web">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container article-page">
+    <article>
+      <h1 class="article-title">Base64, URL Encoding and Hashing: A Developer Quick Reference</h1>
+      <div class="article-meta">
+        <time datetime="2026-11-08">2026-11-08</time>
+        <span class="tag">base64</span><span class="tag">urlencoding</span><span class="tag">hashing</span><span class="tag">developer-tools</span>
+      </div>
+      <div class="article-content">
+        <h1>Base64, URL Encoding and Hashing: A Developer Quick Reference</h1>
+<p>Encoding questions show up in the middle of otherwise simple tasks: a token looks unreadable, a query string breaks when it contains an ampersand, two systems disagree about a signature, or a password hash is compared incorrectly. The three ideas involved — base64 encoding, percent-encoding, and cryptographic hashing — are often confused because all of them transform text into something that looks scrambled.</p>
+<p>They solve different problems. Understanding which one applies saves time and prevents security mistakes.</p>
+<h2>Encoding Is Not Encryption</h2>
+<p>Encoding changes representation so data can travel through a channel that expects a certain character set. Anyone can reverse it with the right decoder. Encryption, by contrast, uses a key: without the key, the original data should be unrecoverable.</p>
+<p>This distinction matters in reviews. A secret that has been base64-encoded is still a secret in plain sight. Treating encoding as protection is a common and serious mistake.</p>
+<h2>Base64 Encoding</h2>
+<p>Base64 maps binary data onto a 65-character alphabet: A–Z, a–z, 0–9, <code>+</code>, <code>/</code>, and <code>=</code> for padding. It exists because many transport formats — email bodies, JSON fields, HTTP headers — are defined for text, not arbitrary bytes.</p>
+<p>The rules come from <a href="https://datatracker.ietf.org/doc/html/rfc4648" target="_blank" rel="noopener">RFC 4648</a>. Three details are easy to get wrong:</p>
+<ol>
+<li><strong>Padding is significant.</strong> A properly padded string ends with <code>=</code> or <code>==</code>. Some decoders accept missing padding; others reject it.</li>
+<li><strong>URL-safe variant uses different symbols.</strong> Standard base64 uses <code>+</code> and <code>/</code>, which have meaning in URLs. The URL-safe alphabet substitutes <code>-</code> and <code>_</code>.</li>
+<li><strong>Base64 is not compression.</strong> It usually makes data larger — roughly 4 characters for every 3 bytes, plus padding.</li>
+</ol>
+<p>A quick example in JavaScript:</p>
+<pre><code class="language-js">const bytes = new TextEncoder().encode("hello");
+const encoded = btoa(String.fromCharCode(...bytes));
+console.log(encoded); // aGVsbG8=</code></pre>
+<p>In Node.js, the same operation is available through a buffer:</p>
+<pre><code class="language-js">const encoded = Buffer.from("hello", "utf8").toString("base64");
+const decoded = Buffer.from(encoded, "base64").toString("utf8");</code></pre>
+<p>The most common production bug is decoding UTF-8 text with <code>atob</code> in a browser. <code>atob</code> returns a binary string, not a Unicode string. If the original text contains non-ASCII characters, you need to convert bytes explicitly. The <a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/atob" target="_blank" rel="noopener">MDN documentation for <code>atob</code></a> describes the limitation.</p>
+<h3>Where Base64 Appears</h3>
+<ul>
+<li><strong>Data URLs</strong> in HTML and CSS, such as <code>data:image/png;base64,...</code></li>
+<li><strong>JSON Web Tokens</strong>, whose three sections are base64url-encoded (not encrypted)</li>
+<li><strong>Basic authentication headers</strong>, which encode <code>username:password</code></li>
+<li><strong>Email attachments</strong>, through MIME encoding</li>
+<li><strong>API payloads</strong> that carry binary blobs inside JSON</li>
+</ul>
+<p>In each case, the encoding is a transport convenience. Inspect the value by decoding it before assuming it is protected.</p>
+<h2>URL Encoding and Percent-Encoding</h2>
+<p>URLs have reserved characters. <code>?</code> starts a query string, <code>&</code> separates parameters, <code>#</code> starts a fragment, and <code>/</code> separates path segments. If a value contains one of these characters, it must be encoded so the parser does not treat it as syntax.</p>
+<p>Percent-encoding replaces an unsafe character with <code>%</code> followed by its hexadecimal byte value. A space becomes <code>%20</code>; a literal <code>&</code> becomes <code>%26</code>.</p>
+<p>Two functions in JavaScript handle this, and they are not interchangeable:</p>
+<ul>
+<li><code>encodeURIComponent()</code> encodes a value you are placing inside a single parameter. It escapes <code>&</code>, <code>=</code>, <code>?</code>, <code>/</code>, and <code>#</code>.</li>
+<li><code>encodeURI()</code> preserves reserved characters because it is meant for a complete URL. Using it on a parameter value is a common source of injection-style bugs.</li>
+</ul>
+<pre><code class="language-js">const q = "tom &amp; jerry / 100%";
+console.log(encodeURIComponent(q)); // tom%20%26%20jerry%20%2F%20100%25</code></pre>
+<p>On the server side, most frameworks decode query parameters automatically. Double-decoding is a frequent mistake: if your framework already decoded <code>%26</code> into <code>&</code>, decoding again can corrupt the value or, worse, reintroduce a separator that changes the meaning of the request.</p>
+<h3>Plus Signs and Form Data</h3>
+<p>HTML form submissions using <code>application/x-www-form-urlencoded</code> encode spaces as <code>+</code>, not <code>%20</code>. If you parse a form body with a URL parser that expects <code>%20</code>, a literal plus sign in user input may be interpreted as a space. Use the correct decoder for the content type, and do not mix the two conventions.</p>
+<h3>Unicode and Multibyte Characters</h3>
+<p>Percent-encoding operates on bytes, not characters. A Chinese character, an emoji, or an accented letter occupies multiple bytes in UTF-8, so it becomes a sequence of <code>%XX</code> values. Decoding works only if the receiver applies the same character encoding. Mismatched assumptions produce mojibake, not errors, which makes the bug harder to notice.</p>
+<h2>Hashing</h2>
+<p>A cryptographic hash takes input of any length and produces a fixed-length digest. It is designed to be one-way: you can verify that two inputs match by comparing digests, but you cannot recover the input from the digest.</p>
+<p>Hashing is used for:</p>
+<ul>
+<li><strong>Integrity checks</strong>, such as comparing a downloaded file against a published checksum</li>
+<li><strong>Password storage</strong>, usually through a dedicated password hashing function rather than a raw hash</li>
+<li><strong>Cache keys and deduplication</strong>, where a stable fingerprint is useful</li>
+<li><strong>Signatures and message authentication</strong>, when combined with a secret key</li>
+</ul>
+<p>Common algorithms and their status:</p>
+<p>| Algorithm | Output | Notes |</p>
+<p>|---|---|---|</p>
+<p>| MD5 | 128-bit | Broken for collision resistance; use only for non-security checksums |</p>
+<p>| SHA-1 | 160-bit | Deprecated for security use; collisions have been demonstrated |</p>
+<p>| SHA-256 | 256-bit | Widely used and appropriate for integrity checks |</p>
+<p>| SHA-512 | 512-bit | Longer digest; useful where the extra length matters |</p>
+<p>A SHA-256 example in Node.js:</p>
+<pre><code class="language-js">import { createHash } from 'crypto';
+const digest = createHash('sha256').update('hello').digest('hex');
+console.log(digest);</code></pre>
+<h3>Hashing Is Not Password Hashing</h3>
+<p>A raw SHA-256 hash of a password is fast to compute, which is exactly what an attacker wants. Dedicated password functions such as Argon2, bcrypt, or scrypt are deliberately slow and memory-intensive. If you are storing passwords, use one of those with a per-user salt, not a general-purpose digest.</p>
+<h3>Comparing Hashes Safely</h3>
+<p>Comparing two digests with a normal string equality check can leak timing information in some contexts. Use a constant-time comparison function when the comparison involves a secret, such as an HMAC verification. Most standard libraries provide one.</p>
+<h2>JSON Formatting and Validation</h2>
+<p>Encoding tasks often sit next to JSON work. A base64 payload inside a JSON field, an escaped query string inside a configuration file, and a checksum stored alongside a manifest all require the JSON itself to be valid.</p>
+<p>Two practical rules:</p>
+<ul>
+<li>Validate before formatting. A formatter that "fixes" invalid JSON can hide the real problem.</li>
+<li>Preserve key order only when something depends on it. JSON objects are unordered by specification, even though most parsers preserve insertion order in practice.</li>
+</ul>
+<p>For large documents, minifying reduces transfer size, but keep an unminified copy for debugging. Comparing a minified response with a readable fixture is much easier than comparing two minified blobs.</p>
+<h2>A Decision Checklist</h2>
+<p>When you see an encoded-looking string, ask:</p>
+<ol>
+<li><strong>Is it meant to be reversible by anyone?</strong> If yes, it is encoding, not encryption.</li>
+<li><strong>Which alphabet?</strong> Standard base64, base64url, percent-encoding, and hex are different and not interchangeable.</li>
+<li><strong>Does the receiver expect padding?</strong> Check the specification or the library default.</li>
+<li><strong>Is the character encoding declared?</strong> UTF-8 is a safe default, but verify at system boundaries.</li>
+<li><strong>Is this a security operation?</strong> If the goal is confidentiality, use encryption; if the goal is password storage, use a password hash; if the goal is integrity, use a strong digest or HMAC.</li>
+</ol>
+<h2>Tools That Help</h2>
+<p>Most of these transformations are small enough to do in a few lines of code, but a dedicated tool is faster when you are inspecting data rather than writing a program. <a href="https://uencoder.com" target="_blank" rel="noopener">UEncoder</a> provides base64, URL, and HTML entity encoding, MD5/SHA family hashes, and JSON formatting in the browser, with processing kept on the local device. Other useful references include the <a href="https://datatracker.ietf.org/doc/html/rfc4648" target="_blank" rel="noopener">RFC 4648 text</a> for base64 details and the <a href="https://nodejs.org/api/crypto.html" target="_blank" rel="noopener">Node.js crypto documentation</a> for hash and HMAC APIs.</p>
+<h2>FAQ</h2>
+<p><strong>Does base64 provide any security?</strong></p>
+<p>No. It is reversible by anyone who recognizes the format. It hides data from casual reading, not from an attacker.</p>
+<p><strong>Why does my base64 string contain <code>-</code> and <code>_</code> instead of <code>+</code> and <code>/</code>?</strong></p>
+<p>It is the URL-safe variant. Use a decoder configured for base64url, or convert the alphabet before decoding.</p>
+<p><strong>Should I use MD5 to verify file downloads?</strong></p>
+<p>MD5 can detect accidental corruption, but it is not reliable against deliberate collisions. Prefer SHA-256 when the checksum is security-relevant.</p>
+<p><strong>Why do spaces become <code>+</code> in some requests?</strong></p>
+<p>That is form-urlencoded behavior. Use <code>%20</code> for general URL components and the form decoder for form bodies.</p>
+<p><strong>Can I decode a hash?</strong></p>
+<p>No. A hash is one-way by design. If you need reversibility, you need encoding or encryption instead.</p>
+<h2>Conclusion</h2>
+<p>Base64 moves bytes through text channels, percent-encoding keeps URLs parseable, and hashing produces a fixed fingerprint for verification. They look similar at a glance and behave very differently in practice. Identifying which operation produced a string — and which one the receiver expects — resolves most of the confusion before it turns into a debugging session.</p>
+      </div>
+      <div class="article-cta">
+        <p>Explore more at <a href="https://uencoder.com">UEncoder - Encoding & Hashing Toolbox</a></p>
+        <a href="https://uencoder.com" class="btn">Visit Website</a>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; 2026 UEncoder - Encoding & Hashing Toolbox. <a href="https://uencoder.com">https://uencoder.com</a></p>
+      <p><a href="https://github.com/niceyayale/uencoder-web">View on GitHub</a></p>
+    </div>
+  </footer>
+</body>
+</html>
